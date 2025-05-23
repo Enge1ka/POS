@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supermarket POS - Returns</title>
+    <link rel="stylesheet" href="style.css"> <!-- Reusing the main stylesheet -->
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Sales</a></li>
+                <li><a href="returns.html">Returns</a></li>
+                <li><a href="inventory.html">Inventory</a></li>
+                <li><a href="reports.html">Reports</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <h1>Process Return</h1>
+        <form id="returnForm">
+            <div>
+                <label for="transactionId">Transaction ID:</label>
+                <input type="text" id="transactionId" name="transactionId" required>
+            </div>
+            <div style="margin-top: 1em;">
+                <label for="returnReason">Reason for Return:</label>
+                <textarea id="returnReason" name="returnReason" rows="3" required></textarea>
+            </div>
+            <button type="submit" style="margin-top: 1em; padding: 0.5em 1em;">Process Return</button>
+        </form>
+        <div id="returnResult" style="margin-top: 2em;">
+            <!-- Return processing result will be displayed here -->
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2023 Supermarket POS</p>
+    </footer>
+    <script src="returns.js"></script>
+</body>
+</html>

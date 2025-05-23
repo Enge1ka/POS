@@ -23,16 +23,33 @@ function createTables() {
             else console.log("Products table created or already exists.");
         });
 
+        // Attempt to add document_number column to Sales table
+        db.run("ALTER TABLE Sales ADD COLUMN document_number TEXT UNIQUE", (err) => {
+            if (err && err.message.includes("duplicate column name")) {
+                // This is expected if the column already exists, so ignore this specific error.
+                console.log("Column document_number already exists in Sales table.");
+            } else if (err) {
+                // For other errors (like table not existing yet), it might be an issue,
+                // but CREATE TABLE IF NOT EXISTS should handle table creation.
+                // This specific ALTER might fail if Sales table doesn't exist at all,
+                // which is fine as CREATE TABLE will define it.
+                console.log("Could not add document_number column via ALTER, CREATE TABLE will attempt to define it. Error:", err.message);
+            } else {
+                console.log("Column document_number added to Sales table or prepared for it.");
+            }
+        });
+
         // Sales Table
         db.run(`CREATE TABLE IF NOT EXISTS Sales (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_number TEXT UNIQUE, 
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             customer_id INTEGER,
             total_amount REAL NOT NULL,
             FOREIGN KEY (customer_id) REFERENCES Customers(id)
         )`, (err) => {
             if (err) console.error("Error creating Sales table", err.message);
-            else console.log("Sales table created or already exists.");
+            else console.log("Sales table created or already exists (with document_number).");
         });
 
         // SaleItems Table (Junction table for Sales and Products)

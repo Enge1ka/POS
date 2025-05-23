@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path'); // Added
 const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const port = 3000;
@@ -8,11 +9,14 @@ app.use(express.json());
 
 // Connect to SQLite database
 const dbPath = './pos_database.db';
+let dbReady = false; // dbReady flag
 const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
     if (err) {
         console.error('Error connecting to the database:', err.message);
+        // dbReady remains false
     } else {
         console.log('Connected to the SQLite database.');
+        dbReady = true;
     }
 });
 
@@ -20,19 +24,33 @@ const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
 
 // GET /api/products - Fetch all products
 app.get('/api/products', (req, res) => {
+    console.log(`[${new Date().toISOString()}] Received request for GET /api/products`); // Log request
+    if (!dbReady) {
+        console.error(`[${new Date().toISOString()}] DB not ready for /api/products`);
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(503).json({ error: "Database not ready. Please try again in a moment." });
+    }
+    
     const sql = "SELECT * FROM Products ORDER BY name";
+    console.log(`[${new Date().toISOString()}] Executing SQL for /api/products: ${sql}`);
+    
     db.all(sql, [], (err, rows) => {
         if (err) {
-            console.error('Error fetching products:', err.message);
-            res.status(500).json({ error: 'Failed to retrieve products from database.' });
-            return;
+            console.error(`[${new Date().toISOString()}] Error executing SQL for /api/products:`, err.message);
+            res.setHeader('Content-Type', 'application/json');
+            return res.status(500).json({ error: 'Failed to retrieve products from database due to a database error.' });
         }
+        console.log(`[${new Date().toISOString()}] Successfully fetched ${rows ? rows.length : 0} products. Sending JSON response.`);
+        res.setHeader('Content-Type', 'application/json'); // Explicitly set content type
         res.json({ products: rows });
     });
 });
 
 // POST /api/products - Add a new product
 app.post('/api/products', (req, res) => {
+    if (!dbReady) {
+        return res.status(503).json({ error: "Database not ready. Please try again in a moment." });
+    }
     const { name, price, stock_quantity } = req.body;
 
     if (name == null || price == null) {
@@ -58,6 +76,9 @@ app.post('/api/products', (req, res) => {
 
 // PUT /api/products/:id - Update an existing product
 app.put('/api/products/:id', (req, res) => {
+    if (!dbReady) {
+        return res.status(503).json({ error: "Database not ready. Please try again in a moment." });
+    }
     const { id } = req.params;
     const { name, price, stock_quantity } = req.body;
 
@@ -113,6 +134,9 @@ app.put('/api/products/:id', (req, res) => {
 
 // DELETE /api/products/:id - Delete a product
 app.delete('/api/products/:id', (req, res) => {
+    if (!dbReady) {
+        return res.status(503).json({ error: "Database not ready. Please try again in a moment." });
+    }
     const { id } = req.params;
     const sql = "DELETE FROM Products WHERE id = ?";
 
@@ -136,6 +160,9 @@ app.delete('/api/products/:id', (req, res) => {
 
 // POST /api/sales - Process a new sale
 app.post('/api/sales', async (req, res) => {
+    if (!dbReady) {
+        return res.status(503).json({ error: "Database not ready. Please try again in a moment." });
+    }
     const { customer_id, items } = req.body; // items should be an array of { product_id, quantity, price_at_sale }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -216,6 +243,17 @@ app.post('/api/sales', async (req, res) => {
                 });
                 saleId = saleResult.saleId; // Assign to the outer scope saleId
 
+                // *** Generate and store document_number ***
+                const documentNumber = `INV-${String(saleId).padStart(5, '0')}`;
+                await new Promise((resolve, reject) => {
+                    db.run("UPDATE Sales SET document_number = ? WHERE id = ?", [documentNumber, saleId], function(errUpdate) {
+                        if (errUpdate) reject(new Error(`Failed to update Sales table with document_number: ${errUpdate.message}`));
+                        else if (this.changes === 0) reject(new Error(`Failed to update document_number, sale ID ${saleId} not found for update.`));
+                        else resolve();
+                    });
+                });
+                // *** End of document_number ***
+
                 const saleItemSql = "INSERT INTO SaleItems (sale_id, product_id, quantity, price_at_sale) VALUES (?, ?, ?, ?)";
                 const updateStockSql = "UPDATE Products SET stock_quantity = stock_quantity - ? WHERE id = ?";
 
@@ -272,7 +310,12 @@ app.post('/api/sales', async (req, res) => {
                         });
                         return res.status(500).json({ error: "Failed to finalize sale transaction (commit error)." });
                     }
-                    res.status(201).json({ message: 'Sale processed successfully with accounting entries.', saleId: saleId, totalAmount: calculatedTotalAmount });
+                    res.status(201).json({ 
+                        message: 'Sale processed successfully with accounting entries.', 
+                        saleId: saleId, 
+                        totalAmount: calculatedTotalAmount,
+                        document_number: documentNumber // Added
+                    });
                 });
 
             } catch (error) {
@@ -294,11 +337,15 @@ app.post('/api/sales', async (req, res) => {
 
 // GET /api/reports/sales - Fetch sales data
 app.get('/api/reports/sales', (req, res) => {
+    if (!dbReady) {
+        return res.status(503).json({ error: "Database not ready. Please try again in a moment." });
+    }
     // For a more detailed report, we can join Sales with SaleItems and Products
     // This is a simplified version showing basic sales info + item details as a string
     const sql = `
         SELECT 
-            s.id AS sale_id, 
+            s.id AS sale_id,
+            s.document_number, /* Added */
             s.timestamp, 
             s.total_amount,
             GROUP_CONCAT(p.name || ' (x' || si.quantity || ' @ $' || printf('%.2f', si.price_at_sale) || ')', '; ') AS items_sold
@@ -318,12 +365,13 @@ app.get('/api/reports/sales', (req, res) => {
 });
 
 // GET /api/reports/inventory - Fetch current inventory status (reuses /api/products)
-// No new endpoint needed if /api/products provides sufficient data (ID, name, stock_quantity, price).
-// If a different structure or more specific inventory data is needed, a new endpoint can be created.
-// For this step, we'll assume /api/products is sufficient for the inventory report.
+// Note: The /api/products endpoint already has the dbReady check.
 
 // GET /api/reports/journal - Fetch all journal entries
 app.get('/api/reports/journal', (req, res) => {
+    if (!dbReady) {
+        return res.status(503).json({ error: "Database not ready. Please try again in a moment." });
+    }
     const sql = `
         SELECT 
             je.entry_id,
@@ -348,6 +396,9 @@ app.get('/api/reports/journal', (req, res) => {
 
 // --- Returns Processing API Endpoint ---
 app.post('/api/returns', async (req, res) => {
+    if (!dbReady) {
+        return res.status(503).json({ error: "Database not ready. Please try again in a moment." });
+    }
     const { sale_id, reason } = req.body;
 
     if (sale_id == null || reason == null || reason.trim() === '') {
@@ -360,8 +411,6 @@ app.post('/api/returns', async (req, res) => {
     }
 
     // Check if this sale has already been fully returned (simplistic check)
-    // In a real system, you'd have a Returns table or a status on the Sales table.
-    // For now, we'll check if there are 'Return' journal entries for this sale_id.
     const existingReturnEntries = await new Promise((resolve, reject) => {
         db.all("SELECT 1 FROM JournalEntries WHERE sale_id = ? AND description LIKE 'Return of Sale ID%' LIMIT 1", [saleIdNum], (err, rows) => {
             if (err) reject(new Error(`DB error checking existing returns: ${err.message}`));
@@ -372,7 +421,6 @@ app.post('/api/returns', async (req, res) => {
     if (existingReturnEntries.length > 0) {
         return res.status(409).json({ error: `Sale ID ${saleIdNum} appears to have already been processed for return.` });
     }
-
 
     db.serialize(async () => { // Added async for await
         db.run("BEGIN TRANSACTION;", async (errBegin) => { // Added async for await
@@ -431,7 +479,6 @@ app.post('/api/returns', async (req, res) => {
                 }
                 totalReturnedCOGS = parseFloat(totalReturnedCOGS.toFixed(2));
 
-
                 // 3. Create reversal journal entries
                 const journalEntrySql = "INSERT INTO JournalEntries (sale_id, account_id, entry_type, amount, description) VALUES (?, ?, ?, ?, ?)";
                 const returnDescription = `Return of Sale ID ${saleIdNum}. Reason: ${reason}`;
@@ -460,9 +507,6 @@ app.post('/api/returns', async (req, res) => {
                     });
                 });
 
-                // Optionally, mark sale as returned or add to a Returns table here.
-                // For now, we'll rely on the journal entries as a log of the return.
-
                 db.run("COMMIT;", (errCommit) => {
                     if (errCommit) {
                         console.error("Error committing return transaction:", errCommit.message);
@@ -490,10 +534,15 @@ app.post('/api/returns', async (req, res) => {
     });
 });
 
-// Root path
+// Serve static files (HTML, CSS, JS) from the root directory
+app.use(express.static(path.join(__dirname)));
+
+// Old root path handler - now commented out or removed
+/*
 app.get('/', (req, res) => {
     res.send('Hello from Supermarket POS Backend!');
 });
+*/
 
 // Start the server
 app.listen(port, () => {

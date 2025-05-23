@@ -208,8 +208,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             const totalPaid = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            displayMessage(`Payment of $${totalPaid.toFixed(2)} processed successfully! Sale ID: ${responseData.saleId}`);
-            generateReceipt(responseData.saleId, totalPaid); // Pass saleId and total to receipt
+            displayMessage(`Payment of $${totalPaid.toFixed(2)} processed successfully! Sale ID: ${responseData.saleId}, Document No.: ${responseData.document_number}`);
+            generateReceipt(responseData.saleId, totalPaid, responseData.document_number); 
             cart.length = 0; // Clear cart
             renderCart(); // Update cart display
             fetchProducts(); // Refresh product list to update stock display
@@ -233,9 +233,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     receiptDiv.style.marginRight = 'auto';
 
 
-    function generateReceipt(saleId, totalPaid) {
+    function generateReceipt(saleId, totalPaid, documentNumber) {
         receiptDiv.innerHTML = '<h2>Receipt</h2>';
-        receiptDiv.innerHTML += `<p>Transaction ID: ${saleId}</p>`; // Use actual Sale ID
+        if (documentNumber) {
+            receiptDiv.innerHTML += `<p>Document No.: ${documentNumber}</p>`;
+        }
+        receiptDiv.innerHTML += `<p>Transaction ID: ${saleId}</p>`; 
         receiptDiv.innerHTML += '<p>Items:</p>';
         const ul = document.createElement('ul');
         // Need to use the cart content *before* it was cleared for the receipt

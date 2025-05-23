@@ -32,12 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             salesReportTableBody.innerHTML = ''; // Clear
             if (!data.sales_report || data.sales_report.length === 0) {
-                salesReportTableBody.innerHTML = '<tr><td colspan="4">No sales data found.</td></tr>';
+                salesReportTableBody.innerHTML = '<tr><td colspan="5">No sales data found.</td></tr>'; // Updated colspan
                 return;
             }
             data.sales_report.forEach(sale => {
                 const row = salesReportTableBody.insertRow();
                 row.insertCell().textContent = sale.sale_id;
+                row.insertCell().textContent = sale.document_number || 'N/A'; // Added document_number
                 row.insertCell().textContent = new Date(sale.timestamp).toLocaleString();
                 row.insertCell().textContent = `$${parseFloat(sale.total_amount).toFixed(2)}`;
                 row.insertCell().textContent = sale.items_sold.replace(/; /g, '\n'); // Display items on new lines
@@ -45,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error fetching sales report:', error);
             displayMessage(`Failed to load sales report: ${error.message}`, 'error');
-            salesReportTableBody.innerHTML = '<tr><td colspan="4">Error loading report.</td></tr>';
+            salesReportTableBody.innerHTML = '<tr><td colspan="5">Error loading report.</td></tr>'; // Updated colspan
         } finally {
             loadSalesReportButton.textContent = 'Load Sales Report';
             loadSalesReportButton.disabled = false;

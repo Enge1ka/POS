@@ -209,7 +209,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const totalPaid = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             displayMessage(`Payment of $${totalPaid.toFixed(2)} processed successfully! Sale ID: ${responseData.saleId}, Document No.: ${responseData.document_number}`);
-            generateReceipt(responseData.saleId, totalPaid, responseData.document_number); 
+            const cartSnapshot = [...cart]; // Create snapshot before clearing
+            generateReceipt(responseData.saleId, totalPaid, responseData.document_number, cartSnapshot); 
             cart.length = 0; // Clear cart
             renderCart(); // Update cart display
             fetchProducts(); // Refresh product list to update stock display
@@ -232,38 +233,136 @@ document.addEventListener('DOMContentLoaded', async () => {
     receiptDiv.style.marginLeft = 'auto';
     receiptDiv.style.marginRight = 'auto';
 
+    const printInvoiceButton = document.createElement('button');
+    printInvoiceButton.id = 'printInvoiceButton'; 
+    printInvoiceButton.textContent = 'Print Invoice';
+    printInvoiceButton.style.padding = '0.7em 1.5em';
+    printInvoiceButton.style.backgroundColor = '#6c757d'; 
+    printInvoiceButton.style.color = 'white';
+    printInvoiceButton.style.border = 'none';
+    printInvoiceButton.style.borderRadius = '4px';
+    printInvoiceButton.style.cursor = 'pointer';
+    printInvoiceButton.style.marginTop = '10px'; 
+    printInvoiceButton.style.display = 'none'; // Initially hidden
 
-    function generateReceipt(saleId, totalPaid, documentNumber) {
-        receiptDiv.innerHTML = '<h2>Receipt</h2>';
-        if (documentNumber) {
-            receiptDiv.innerHTML += `<p>Document No.: ${documentNumber}</p>`;
-        }
-        receiptDiv.innerHTML += `<p>Transaction ID: ${saleId}</p>`; 
-        receiptDiv.innerHTML += '<p>Items:</p>';
-        const ul = document.createElement('ul');
-        // Need to use the cart content *before* it was cleared for the receipt
-        // For simplicity, we'll reconstruct from the totalPaid and saleId, or pass cart items
-        // Let's assume cart items were passed or use a snapshot
-        // For now, this part will be simplified as cart is already cleared.
-        // A better approach would be to pass the cart items to generateReceipt.
-        // However, since the user message already confirms the total, we'll keep it simple.
-        cart.forEach(item => { // This will be empty if called after cart.length = 0
-             const li = document.createElement('li');
-             li.textContent = `${item.name} (x${item.quantity}) - $${(item.price * item.quantity).toFixed(2)}`;
-             ul.appendChild(li);
+    printInvoiceButton.onmouseover = () => printInvoiceButton.style.backgroundColor = '#5a6268';
+    printInvoiceButton.onmouseout = () => printInvoiceButton.style.backgroundColor = '#6c757d';
+
+    printInvoiceButton.onclick = () => {
+        window.print();
+    };
+
+    function generateReceipt(saleId, totalPaid, documentNumber, cartSnapshot) {
+        receiptDiv.innerHTML = ''; // Clear previous content
+
+        const invoiceTitle = document.createElement('h2');
+        invoiceTitle.textContent = 'INVOICE';
+        invoiceTitle.style.textAlign = 'center';
+        invoiceTitle.style.marginBottom = '20px';
+        receiptDiv.appendChild(invoiceTitle);
+
+        // Header Section
+        const headerDiv = document.createElement('div');
+        headerDiv.style.marginBottom = '20px';
+        
+        const docNumP = document.createElement('p');
+        docNumP.innerHTML = `<strong>Document No.:</strong> ${documentNumber || 'N/A'}`;
+        headerDiv.appendChild(docNumP);
+
+        const transIdP = document.createElement('p');
+        transIdP.innerHTML = `<strong>Transaction ID:</strong> ${saleId}`;
+        headerDiv.appendChild(transIdP);
+        
+        const customerNameP = document.createElement('p');
+        customerNameP.innerHTML = `<strong>Customer:</strong> Retail Customer (Placeholder)`; // Placeholder
+        headerDiv.appendChild(customerNameP);
+
+        const dateP = document.createElement('p');
+        dateP.innerHTML = `<strong>Date:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+        headerDiv.appendChild(dateP);
+        
+        receiptDiv.appendChild(headerDiv);
+
+        // Line Items Section
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.marginBottom = '20px';
+
+        const thead = table.createTHead();
+        const headerRow = thead.insertRow();
+        const headers = ['Item', 'Qty', 'Unit Price', 'Total'];
+        headers.forEach(headerText => {
+            const th = document.createElement('th');
+            th.textContent = headerText;
+            th.style.border = '1px solid #ddd';
+            th.style.padding = '8px';
+            th.style.textAlign = 'left';
+            th.style.backgroundColor = '#f2f2f2';
+            // Append th to headerRow in the correct order
+            headerRow.appendChild(th); 
         });
-        if (ul.children.length === 0) { // If cart was cleared before receipt generation
-            receiptDiv.innerHTML += '<p><em>(Item details processed)</em></p>';
+        // The above loop already appends them, so these lines are redundant if loop is used as intended.
+        // If headers are fixed, direct append is fine:
+        // headerRow.appendChild(headers[0]); // Item
+        // headerRow.appendChild(headers[1]); // Qty
+        // headerRow.appendChild(headers[2]); // Unit Price
+        // headerRow.appendChild(headers[3]); // Total
+
+        const tbody = table.createTBody();
+        if (cartSnapshot && cartSnapshot.length > 0) {
+            cartSnapshot.forEach(item => {
+                const row = tbody.insertRow();
+                row.insertCell().textContent = item.name;
+                row.insertCell().textContent = item.quantity;
+                row.insertCell().textContent = `$${parseFloat(item.price).toFixed(2)}`;
+                row.insertCell().textContent = `$${(item.price * item.quantity).toFixed(2)}`;
+                Array.from(row.cells).forEach(cell => {
+                    cell.style.border = '1px solid #ddd';
+                    cell.style.padding = '8px';
+                });
+            });
         } else {
-            receiptDiv.appendChild(ul);
+            const row = tbody.insertRow();
+            const cell = row.insertCell();
+            cell.colSpan = 4;
+            cell.textContent = '(Item details processed or cart was empty)';
+            cell.style.textAlign = 'center';
+            cell.style.padding = '8px';
+            cell.style.border = '1px solid #ddd';
         }
+        receiptDiv.appendChild(table);
 
-        receiptDiv.innerHTML += `<p><strong>Total Paid: $${parseFloat(totalPaid).toFixed(2)}</strong></p>`;
-        receiptDiv.style.display = 'block';
+        // Totals Section
+        const totalsDiv = document.createElement('div');
+        totalsDiv.style.textAlign = 'right';
 
-        setTimeout(() => {
-            receiptDiv.style.display = 'none';
-        }, 15000); // Hide after 15 seconds
+        // In a real scenario, subtotal might be different from total if there are taxes/discounts
+        const subtotalP = document.createElement('p');
+        subtotalP.innerHTML = `<strong>Subtotal:</strong> $${parseFloat(totalPaid).toFixed(2)}`;
+        totalsDiv.appendChild(subtotalP);
+        
+        // Placeholder for Tax (not implemented)
+        // const taxP = document.createElement('p');
+        // taxP.innerHTML = `<strong>Tax (0%):</strong> $0.00`;
+        // totalsDiv.appendChild(taxP);
+
+        const grandTotalP = document.createElement('p');
+        grandTotalP.style.fontSize = '1.2em';
+        grandTotalP.innerHTML = `<strong>Total Paid:</strong> $${parseFloat(totalPaid).toFixed(2)}`;
+        totalsDiv.appendChild(grandTotalP);
+
+        receiptDiv.appendChild(totalsDiv);
+        
+        receiptDiv.style.display = 'block'; // Make it visible
+        printInvoiceButton.style.display = 'block'; // Show print button too
+
+        // Auto-hide logic (can be kept or removed based on preference for new "Print" button)
+        // If re-enabling, ensure printInvoiceButton.style.display = 'none'; is also added.
+        // setTimeout(() => {
+        //     receiptDiv.style.display = 'none';
+        //     printInvoiceButton.style.display = 'none'; // Hide print button
+        // }, 15000); // Hide after 15 seconds
     }
 
     // Append elements to main
@@ -275,6 +374,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         mainElement.appendChild(totalDiv);
         mainElement.appendChild(paymentButton);
         mainElement.appendChild(receiptDiv);
+        mainElement.appendChild(printInvoiceButton); // Append print button
         
         fetchProducts(); // Initial product load
         renderCart();    // Initial cart render

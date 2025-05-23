@@ -97,3 +97,129 @@ footer {
     margin-left: auto;
     margin-right: auto;
 }
+
+/* General Invoice Styling (within #receiptDiv) */
+#receiptDiv {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin: 20px auto; /* Centered, with some margin */
+    max-width: 800px; /* Or your preferred width for an invoice */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    font-family: 'Arial', sans-serif; /* A common font for invoices */
+    color: #333;
+    line-height: 1.6;
+}
+
+#receiptDiv h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+#receiptDiv p {
+    margin: 5px 0;
+}
+
+#receiptDiv strong {
+    color: #555;
+}
+
+#receiptDiv table { /* Styles for the items table */
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+#receiptDiv table th,
+#receiptDiv table td {
+    border: 1px solid #ddd;
+    padding: 10px; /* Increased padding for readability */
+    text-align: left;
+}
+
+#receiptDiv table th {
+    background-color: #f9f9f9; /* Lighter header for the table */
+    font-weight: bold;
+}
+
+#receiptDiv table td:nth-child(2), /* Quantity */
+#receiptDiv table td:nth-child(3), /* Unit Price */
+#receiptDiv table td:nth-child(4) { /* Total */
+    text-align: right;
+}
+#receiptDiv table th:nth-child(2),
+#receiptDiv table th:nth-child(3),
+#receiptDiv table th:nth-child(4) {
+    text-align: right;
+}
+
+
+#receiptDiv div[style*="text-align: right"] p { /* Targeting the totals section */
+    margin: 8px 0; /* More spacing for totals */
+    font-size: 1.1em; /* Slightly larger totals */
+}
+
+#receiptDiv div[style*="text-align: right"] p strong {
+    display: inline-block;
+    width: 150px; /* Align strong tags in totals */
+}
+
+
+/* Print-Specific Styles */
+@media print {
+    body * {
+        visibility: hidden; /* Hide everything by default */
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+        font-size: 10pt; /* Adjust base font size for print */
+        line-height: 1.4;
+    }
+
+    #receiptDiv, #receiptDiv * {
+        visibility: visible; /* Make the receipt and its children visible */
+    }
+
+    #receiptDiv {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 10mm; /* Add some padding for print */
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
+        font-family: 'Times New Roman', Times, serif; /* Serif font often preferred for print */
+    }
+    
+    #receiptDiv h2 {
+        font-size: 16pt;
+        margin-bottom: 15px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #000; /* Solid black border for print */
+    }
+
+    #receiptDiv table th,
+    #receiptDiv table td {
+        border: 1px solid #666; /* Slightly darker borders for print table */
+        padding: 6px;
+    }
+    
+    #receiptDiv table th {
+        background-color: #eee !important; /* Ensure background is applied if overridden by inline styles */
+        -webkit-print-color-adjust: exact; /* For Chrome/Safari to print background colors */
+        print-color-adjust: exact; /* Standard */
+    }
+    
+    /* Hide any "Print Invoice" button if it's part of the receiptDiv itself */
+    #printInvoiceButton { 
+        display: none !important; 
+    }
+}

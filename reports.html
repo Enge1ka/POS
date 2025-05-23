@@ -5,6 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Supermarket POS - Reports</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .report-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .report-section h2 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        table.report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        table.report-table th, table.report-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        table.report-table th {
+            background-color: #f2f2f2;
+        }
+        #userMessages { margin-bottom: 15px; }
+        .message { padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+        .message.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
 </head>
 <body>
     <header>
@@ -19,11 +49,70 @@
     </header>
     <main>
         <h1>Reports</h1>
-        <p>This page is currently under development. Please check back later.</p>
+        <div id="userMessages"></div>
+
+        <section class="report-section" id="salesReportSection">
+            <h2>Sales Report</h2>
+            <!-- Add date filters here later if needed -->
+            <button id="loadSalesReportButton">Load Sales Report</button>
+            <table class="report-table" id="salesReportTable">
+                <thead>
+                    <tr>
+                        <th>Sale ID</th>
+                        <th>Timestamp</th>
+                        <th>Total Amount</th>
+                        <th>Items Sold</th>
+                    </tr>
+                </thead>
+                <tbody id="salesReportTableBody">
+                    <!-- Sales data will be inserted here -->
+                </tbody>
+            </table>
+        </section>
+
+        <section class="report-section" id="inventoryReportSection">
+            <h2>Inventory Report</h2>
+            <button id="loadInventoryReportButton">Load Inventory Report</button>
+            <table class="report-table" id="inventoryReportTable">
+                <thead>
+                    <tr>
+                        <th>Product ID</th>
+                        <th>Name</th>
+                        <th>Current Stock</th>
+                        <th>Price</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryReportTableBody">
+                    <!-- Inventory data will be inserted here -->
+                </tbody>
+            </table>
+        </section>
+        
+        <section class="report-section" id="journalEntriesReportSection">
+            <h2>Journal Entries Report</h2>
+            <button id="loadJournalEntriesReportButton">Load Journal Entries</button>
+            <table class="report-table" id="journalEntriesReportTable">
+                <thead>
+                    <tr>
+                        <th>Entry ID</th>
+                        <th>Sale ID</th>
+                        <th>Timestamp</th>
+                        <th>Account Name</th>
+                        <th>Type (Dr/Cr)</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody id="journalEntriesReportTableBody">
+                    <!-- Journal entries will be inserted here -->
+                </tbody>
+            </table>
+        </section>
+
     </main>
     <footer>
         <p>&copy; 2023 Supermarket POS</p>
     </footer>
-    <!-- <script src="reports.js"></script> --> <!-- Optional: for future use -->
+    <script src="reports.js"></script>
 </body>
 </html>

@@ -1,46 +1,53 @@
 document.addEventListener('DOMContentLoaded', () => {
     const returnForm = document.getElementById('returnForm');
     const returnResultDiv = document.getElementById('returnResult');
+    const transactionIdField = document.getElementById('transactionId');
+    const returnReasonField = document.getElementById('returnReason');
 
     if (returnForm) {
-        returnForm.addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent actual form submission
+        returnForm.addEventListener('submit', async function(event) {
+            event.preventDefault(); 
 
-            const transactionId = document.getElementById('transactionId').value;
-            const returnReason = document.getElementById('returnReason').value;
+            const sale_id = transactionIdField.value.trim();
+            const reason = returnReasonField.value.trim();
 
-            if (!transactionId || !returnReason) {
-                returnResultDiv.innerHTML = '<p style="color: red;">Please fill in all fields.</p>';
+            if (!sale_id || !reason) {
+                returnResultDiv.innerHTML = '<p style="color: red;">Please fill in both Transaction ID and Reason for Return.</p>';
                 return;
             }
 
-            // Mock verification and processing
-            // In a real system, this would involve backend calls
-            console.log(`Processing return for Transaction ID: ${transactionId}, Reason: ${returnReason}`);
-
-            // Simulate a delay for processing
             returnResultDiv.innerHTML = '<p>Processing your return...</p>';
+            const submitButton = returnForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
 
-            setTimeout(() => {
-                // Mock success scenario
-                const success = Math.random() > 0.2; // 80% chance of success for demo
+            try {
+                const response = await fetch('/api/returns', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ sale_id, reason }),
+                });
 
-                if (success) {
-                    returnResultDiv.innerHTML = `
-                        <p style="color: green;">Return processed successfully for Transaction ID: ${transactionId}.</p>
-                        <p>Refund of [Mock Amount] has been initiated.</p>
-                        <p>Inventory updated (mock).</p>
-                    `;
-                    // Clear form
-                    returnForm.reset();
-                } else {
-                    // Mock failure scenario
-                    returnResultDiv.innerHTML = `
-                        <p style="color: red;">Could not process return for Transaction ID: ${transactionId}.</p>
-                        <p>Reason: Invalid Transaction ID or item not eligible for return (mock).</p>
-                    `;
+                const responseData = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(responseData.error || `HTTP error! status: ${response.status}`);
                 }
-            }, 1500); // Simulate 1.5 seconds processing time
+
+                returnResultDiv.innerHTML = `
+                    <p style="color: green;">${responseData.message}</p>
+                    <p>Returned Amount: $${responseData.totalReturnedAmount ? parseFloat(responseData.totalReturnedAmount).toFixed(2) : 'N/A'}</p>
+                `;
+                returnForm.reset(); // Clear form
+            } catch (error) {
+                console.error('Error processing return:', error);
+                returnResultDiv.innerHTML = `
+                    <p style="color: red;">Return processing failed: ${error.message}</p>
+                `;
+            } finally {
+                submitButton.disabled = false;
+            }
         });
     } else {
         console.error('Return form not found on the page!');
